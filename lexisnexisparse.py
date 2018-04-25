@@ -1,6 +1,7 @@
 import re
 import os.path
 import codecs
+import unicodedata
 
 """
 The LexisParser class is a class that can read and parse LexisNexis TXT files from filenames. Initialise the to
@@ -29,7 +30,7 @@ class LexisParser:
         assert os.path.isfile(fname)
 
         file_list = [] #Reduce the file to a list of lines
-        with codecs.open("lexisnexis_en.txt","r","utf8") as f:
+        with codecs.open(fname,"r","utf8") as f:
             for line in f:
                 line = line.replace("\r\n","")
                 file_list.append(line)
@@ -137,6 +138,9 @@ class LexisParser:
                 res["TEXT"] += " " + article[position]
                 
             position += 1
+
+        res["TEXT"] = unicodedata.normalize("NFKD",res["TEXT"]) #normalises the unicode characters,
+            #replacing incompatible characters with their utf-8 equivalent.
         
         #End of text. From here it is metadata fields until the end.
         while position < len(article):
