@@ -141,7 +141,8 @@ class LexisParser:
 
         res["TEXT"] = unicodedata.normalize("NFKD",res["TEXT"]) #normalises the unicode characters,
             #replacing incompatible characters with their utf-8 equivalent.
-        
+        res["TEXT"] = re.sub(" +"," ",res["TEXT"])
+
         #End of text. From here it is metadata fields until the end.
         while position < len(article):
             var = re.search(self.patterns["end_metadata"],article[position])[0]

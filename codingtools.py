@@ -71,7 +71,7 @@ class codingTool:
             self.at_item -= 1
             
             self.options.value = self.coded[self.to_code[self.at_item]]
-            self.options.description = self.to_code[self.at_item]
+            self.item.value = self.to_code[self.at_item]
     
     def next_clicked(self, b):
         '''
@@ -85,7 +85,7 @@ class codingTool:
             print('Done!')
         else:     
             self.options.value = None
-            self.options.description = self.to_code[self.at_item]
+            self.item.value = self.to_code[self.at_item]
     
     def stop_clicked(self, b):
         '''
@@ -108,7 +108,7 @@ class codingTool:
         }
 
         with open(fname,'w+') as f:
-            json.dump(class_dict,f)
+            json.dump(class_dict,f,indent = 4)
 
 def from_json(json_str):
     ''' 
@@ -123,6 +123,6 @@ def from_json(json_str):
     coding_object.coded = class_dict['coded']
 
     coding_object.at_item = class_dict['at_item']
-    coding_object.options.description = coding_object.to_code[coding_object.at_item]
+    coding_object.item.value = coding_object.to_code[coding_object.at_item]
 
     return coding_object

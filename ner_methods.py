@@ -1,4 +1,5 @@
 import json
+from stanfordcorenlp import StanfordCoreNLP
 
 def getUniqueEntities(text, nlp):
     '''
@@ -6,8 +7,15 @@ def getUniqueEntities(text, nlp):
     
     Keyword arguments:
     text -- the text to extract named entities from (type str)
-    nlp -- StanfordCoreNLP object to connect to coreNLP server.
+    nlp -- StanfordCoreNLP or spaCy object
     '''
+    if isinstance(nlp,StanfordCoreNLP):
+        return getUniqueEntitiesCoreNLP(text,nlp)
+    else:
+        return getUniqueEntitiesSpaCy(text,nlp)
+    
+
+def getUniqueEntitiesCoreNLP(text,nlp):
     namedEntities = set()
     
     props = {'annotators': 'ner','pipelineLanguage':'en'}
@@ -32,5 +40,13 @@ def getUniqueEntities(text, nlp):
                 else:
                     entity = ''
                     entity_type = 'O'
+    
+    return namedEntities
+
+def getUniqueEntitiesSpaCy(text,nlp):
+    namedEntities = set()
+
+    for entity in nlp(text).ents:
+        namedEntities.add((entity.text,entity.label_))
     
     return namedEntities
