@@ -17,13 +17,14 @@ class LexisParser:
     
     def __init__(self):
         self.patterns = {
-            "start_article" : re.compile("\d+ of \d+ DOCUMENTS$"),
-            "start_text" : re.compile("^LENGTH: \d+ words$"),
-            "end_article" : re.compile("^LANGUAGE:.*$"), #Language has multiple formats, so keep it open
-            "date" : re.compile("[a-zA-Z]+ \d{1,2},* \d{4}|\d{1,2} [a-zA-Z]+,* \d{4}|^\s+[a-zA-Z]* \d{4}$"),
-            "is_show" : re.compile("^\s+SHOW: "),
-            "begin_metadata" : re.compile("^LENGTH: |^SECTION: |^BYLINE: |^DATELINE: |^HIGHLIGHT: "),
-            "end_metadata" : re.compile("^LOAD-DATE: |^LANGUAGE: |^PUBLICATION-TYPE: |DISTRIBUTION: |JOURNAL-CODE: ")
+            "start_article" : re.compile(r"\d+ of \d+ DOCUMENTS$"),
+            "start_text" : re.compile(r"^LENGTH: \d+ words$"),
+            "end_article" : re.compile(r"^LANGUAGE:.*$"), #Language has multiple formats, so keep it open
+            "date" : re.compile(r"[a-zA-Z]+ \d{1,2},* \d{4}|\d{1,2} [a-zA-Z]+,* \d{4}|^\s+[a-zA-Z]* \d{4}$"),
+            "is_show" : re.compile(r"^\s+SHOW: "),
+            "begin_metadata" : re.compile(r"^LENGTH: |^SECTION: |^BYLINE: |^DATELINE: |^HIGHLIGHT: "),
+            "end_metadata" : re.compile(r"^LOAD-DATE: |^LANGUAGE: |^PUBLICATION-TYPE: |DISTRIBUTION: |JOURNAL-CODE: "),
+            "eol" : re.compile(r"\r{0,1}\n")
         }
     
     def parse_file(self, fname: str):
@@ -32,7 +33,7 @@ class LexisParser:
         file_list = [] #Reduce the file to a list of lines
         with codecs.open(fname,"r","utf8") as f:
             for line in f:
-                line = line.replace("\r\n","")
+                line = re.sub(self.patterns["eol"],"",line)
                 file_list.append(line)
         
         output = []
@@ -68,7 +69,10 @@ class LexisParser:
         position = 0
         res = {}
         
-        #First line is always medium. Extract and remove
+        #First line **non-empty** is always medium. Extract and remove
+        while article[position] == '':
+            position += 1
+
         res['MEDIUM'] = article[position].lstrip()
         position += 1
         while article[position] != "":
@@ -122,26 +126,41 @@ class LexisParser:
         #Metadata extraction. Possible fields: ["BYLINE","SECTION","LENGTH","DATELINE","HIGHLIGHT"]
         #Extract them one by one and add its contents to the dictionary.
         while re.search(self.patterns["begin_metadata"],article[position]) is not None:
+
             var = re.search(self.patterns["begin_metadata"],article[position])[0]
             res[var[:-2]] = article[position][len(var):]
-            position += 2        
+            position += 1
+
+            while article[position] != "": #Metadata (BYLINE, HIGHLIGHT) can stretch over multiple lines. Stop at first empty line.
+                res[var[:-2]] += " " + article[position]
+                position += 1
+
+            while article[position] == "": #Sometimes there are multiple blank lines between metadata. We know the
+                # first is at this point, given that the previous while loop ended. e.g. 3 lines between LENGTH and HIGHLIGHT.
+                # This skips all those lines until we have a new line to find metadata in.
+                position += 1    
         
         #Text extraction. Text ends with LOAD-DATE field
-        res["TEXT"] = ""
+        res["TEXT"] = []
+        text = ""
         first_line = True
         while re.search(self.patterns["end_metadata"],article[position]) is None:
             
             if first_line & (article[position] != ""):
-                res["TEXT"] += article[position]
+                text += article[position]
                 first_line = False
             elif article[position] != "":
-                res["TEXT"] += " " + article[position]
-                
-            position += 1
+                text += " " + article[position]
+            elif text != "": #Whitespace found, but nothing saved
+                # Normalise for unicode characters, replaced by whitespace which is then dropped.
+                text = unicodedata.normalize("NFKD",text)
+                text = re.sub(" +"," ",text)
+                #Add paragraph to the text box and start over
+                res["TEXT"].append(text)
+                text = ""
+                first_line = True
 
-        res["TEXT"] = unicodedata.normalize("NFKD",res["TEXT"]) #normalises the unicode characters,
-            #replacing incompatible characters with their utf-8 equivalent.
-        res["TEXT"] = re.sub(" +"," ",res["TEXT"])
+            position += 1
 
         #End of text. From here it is metadata fields until the end.
         while position < len(article):
