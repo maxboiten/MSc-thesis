@@ -126,3 +126,69 @@ def from_json(json_str):
     coding_object.item.value = coding_object.to_code[coding_object.at_item]
 
     return coding_object
+
+class DisambiguationTool:
+
+    def __init__(self, disambiguation_map, start = 0):
+        self.map = disambiguation_map.copy() #Note, deep copy to make sure this is separate
+        self.todo = sorted([v for k,v in self.map.items()], key = lambda x: x[0])
+        self.position = start
+
+        self.toDisambiguate = widgets.Label(value = self.todo[self.position][0])
+
+        self.disambiguated = widgets.Text(value=self.todo[self.position][0],
+                                        placeholder='Type something',
+                                        description='Root:',
+                                        disabled=False)
+
+        self.next = widgets.Button(description = 'Next')
+        self.next.on_click(self.next_clicked)
+
+        self.none = widgets.Button(description = 'None')
+        self.none.on_click(self.none_clicked)
+
+        self.previous = widgets.Button(description = 'Previous')
+        self.previous.on_click(self.previous_clicked)
+
+        bottom_rule = widgets.HBox([self.disambiguated,self.next,self.none,self.previous])
+        bottom_rule.layout.justify_content = 'space-between'
+        
+        self.tool = widgets.VBox([self.toDisambiguate,bottom_rule])
+        self.tool.layout.justify_content = 'space-around'
+
+    def next_clicked(self, b):
+        self.map[self.todo[self.position]] = (self.disambiguated.value, self.todo[self.position][1])
+
+        self.position += 1
+        if self.position == len(self.todo):
+            clear_output()
+            print('Done!')
+        else:
+            self.disambiguated.value = self.todo[self.position][0]
+            self.toDisambiguate.value = self.todo[self.position][0]
+
+    def previous_clicked(self, b):
+        self.map[self.todo[self.position]] = (self.disambiguated.value, self.todo[self.position][1])
+
+        if self.position > 0:
+            self.position -= 1
+            self.disambiguated.value = self.todo[self.position][0]
+            self.toDisambiguate.value = self.todo[self.position][0]
+    
+    def none_clicked(self, b):
+        self.map[self.todo[self.position]] = ('NONE', None)
+
+        self.position += 1
+        if self.position == len(self.todo):
+            clear_output()
+            print('Done!')
+        else:
+            self.disambiguated.value = self.todo[self.position][0]
+            self.toDisambiguate.value = self.todo[self.position][0]
+
+    def startWorking(self):
+        display(self.tool)
+    
+    def getMap(self):
+        return self.map
+    
