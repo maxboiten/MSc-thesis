@@ -117,13 +117,17 @@ def from_json(json_str):
     Keyword arguments:
     json_str -- A read json file returned by the `to_json` method from codingTool
     ''' 
-    class_dict = json.loads(json_str)
+    class_dict = json.load(json_str)
 
     coding_object = codingTool(class_dict['to_code'],class_dict['categories'])
     coding_object.coded = class_dict['coded']
 
     coding_object.at_item = class_dict['at_item']
-    coding_object.item.value = coding_object.to_code[coding_object.at_item]
+
+    if coding_object.at_item >= len(coding_object.to_code):
+        coding_object.item.value = 'Done'
+    else:
+        coding_object.item.value = coding_object.to_code[coding_object.at_item]
 
     return coding_object
 
